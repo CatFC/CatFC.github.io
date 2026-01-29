@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Minecraft Name Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 20px;
+    }
+    h1 { color: #38bdf8; }
+    textarea {
+      width: 100%;
+      height: 150px;
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #334155;
+      padding: 10px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 16px;
+      background: #38bdf8;
+      border: none;
+      color: #020617;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    #log {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background: #020617;
+      padding: 10px;
+      border: 1px solid #334155;
+      height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>⛏️ Minecraft Name Checker</h1>
+  <p>Namen (je Zeile ein Name):</p>
+  <textarea id="names"></textarea>
+  <br />
+  <button onclick="startCheck()">Start</button>
+
+  <div id="log"></div>
+
+  <script>
+    const log = document.getElementById("log");
+
+    function write(msg) {
+      log.textContent += msg + "\n";
+      log.scrollTop = log.scrollHeight;
+    }
+
+    async function checkName(name) {
+      const res = await fetch(
+        `https://api.mojang.com/users/profiles/minecraft/${name}`
+      );
+
+      if (res.status === 404) return "FREE";
+      if (res.status === 200) return "TAKEN";
+      if (res.status === 429) return "RATE_LIMIT";
+      return "ERROR";
+    }
+
+    async function startCheck() {
+      log.textContent = "";
+      const list = document.getElementById("names").value
+        .split("\n")
+        .map(n => n.trim())
+        .filter(n => n.length > 0);
+
+      write(`🔎 Starte Check (${list.length} Namen)`);
+
+      const start = Date.now();
+
+      for (let i = 0; i < list.length; i++) {
+        const name = list[i];
+        const result = await checkName(name);
+
+        const elapsed = (Date.now() - start) / 1000;
+        const avg = elapsed / (i + 1);
+        const remaining = Math.round(avg * (list.length - i - 1));
+
+        write(`${name} → ${result} | Rest: ${remaining}s`);
+
+        if (result === "RATE_LIMIT") {
+          write("⏸️ Rate-Limit, warte 10s...");
+          await new Promise(r => setTimeout(r, 10000));
+        }
+
+        await new Promise(r => setTimeout(r, 1200));
+      }
+
+      write("🎉 Fertig!");
+    }
+  </script>
+</body>
+</html>
